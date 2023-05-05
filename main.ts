@@ -503,6 +503,9 @@ export default class ChatGPT_MD extends Plugin {
 			icon: "message-circle",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				let selectedText = editor.getSelection()
+				selectedText = selectedText.replace(/\[\[([^\[\]]*?)\|([^\[\]]*?)\]\]/g, "$2") // 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없도록 함. [[]] 가 유지되도록, 이 라인이 다음 라인보다 먼저와야 함.
+				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1")
+				selectedText = selectedText.replace(/\[([^\[\]]+?)\]\(([^()]+?)\)/g, "$1") // 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없도록 함
 				selectedText = `(((${selectedText})))`
 
 				let messages = this.splitMessages(selectedText); // split 하여 array 로 만듬
