@@ -87,11 +87,17 @@ export class StreamManager {
 				source.addEventListener("message", (e: any) => {
 					if (e.data != "[DONE]") {
 						const payload = JSON.parse(e.data);
-						const text = payload.choices[0].delta.content;
+						let text = payload.choices[0].delta.content;
 
 						// if text undefined, then do nothing
 						if (!text) {
 							return;
+						}
+
+						if (with_role) {
+						}
+						else {
+							text = text.replace(/\(\(/g, "").replace(/\)\)/g, "")
 						}
 
 						const cursor = editor.getCursor();

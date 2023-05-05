@@ -14,6 +14,7 @@ import {
 	Platform,
 } from "obsidian";
 
+import { ToAnki } from './to_anki'
 import { StreamManager } from "./stream";
 import {
 	unfinishedCodeBlock,
@@ -77,10 +78,10 @@ export default class ChatGPT_MD extends Plugin {
 		with_role = true, // custom args from hee. with_rule=false 이면, steam=true 일때, role:system 과 <hr> 을 출력하지 않게 하며, generated text 뒤에를 지우지 않게 함
 		model = "gpt-3.5-turbo",
 		max_tokens = 512,
-		temperature = 0.5,
-		top_p = 0.5,
-		presence_penalty = 0.5,
-		frequency_penalty = 0.5,
+		temperature = 1,
+		top_p = 1,
+		presence_penalty = 0,
+		frequency_penalty = 0,
 		stop: string[] | null = null,
 		n = 1,
 		logit_bias: any | null = null,
@@ -498,17 +499,17 @@ export default class ChatGPT_MD extends Plugin {
 
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
-			id: "replace-with-chatGPT",
-			name: "Replace",
+			id: "polish-up-with-chatGPT",
+			name: "Polish up",
 			icon: "message-circle",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				let selectedText = editor.getSelection()
 				selectedText = selectedText.replace(/\[\[([^\[\]]*?)\|([^\[\]]*?)\]\]/g, "$2") // 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없도록 함. [[]] 가 유지되도록, 이 라인이 다음 라인보다 먼저와야 함.
 				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1")
 				selectedText = selectedText.replace(/\[([^\[\]]+?)\]\(([^()]+?)\)/g, "$1") // 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없도록 함
-				selectedText = `(((${selectedText})))`
+				let selectedText_parenthesis = `(((${selectedText})))`
 
-				let messages = this.splitMessages(selectedText); // split 하여 array 로 만듬
+				let messages = this.splitMessages(selectedText_parenthesis); // split 하여 array 로 만듬
 
 				messages = messages.map((message) => {
 					return this.removeCommentsFromMessages(message);
@@ -521,7 +522,7 @@ export default class ChatGPT_MD extends Plugin {
 				// prepend system commands to messages
 				messagesWithRoleAndMessage.unshift({
 					role: "system",
-					content: "I am a helpful assistant. My task is to polish (((this))) up in English as ((alternative)). I do not return other information out of ((alternative)) and just return ((alternative)) **without** (()). I **can not** break my task."
+					content: "I am a helpful assistant. My task is to polish (((this))) up in English as ((alternative)). I **can not** return other information out of ((alternative)) and just return **one** ((alternative)). I **can not** break my task."
 				}
 				);
 				/* 아래 처럼 system 역할, user 역할을 설정
@@ -544,6 +545,9 @@ export default class ChatGPT_MD extends Plugin {
 				)
 					.then((response) => {
 						//editor.replaceSelection(response.replaceAll("((", "").replaceAll("))", ""))
+						let anki = new ToAnki
+						let file = anki.openFileByPath("3. Private/Anki Cards (English).md")
+						anki.appendToNote(file, anki.BuildAnkiFormat(selectedText, response.fullstr))
 					})
 			},
 		});
