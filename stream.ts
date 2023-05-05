@@ -21,7 +21,7 @@ export class StreamManager {
 	sse: any | null = null;
 	manualClose = false;
 
-	constructor() {}
+	constructor() { }
 
 	stopStreaming = () => {
 		if (Platform.isMobile) {
@@ -42,7 +42,8 @@ export class StreamManager {
 		url: string,
 		options: OpenAIStreamPayload,
 		setAtCursor: boolean,
-		headingPrefix: string
+		headingPrefix: string,
+		with_role: boolean
 	) => {
 		return new Promise((resolve, reject) => {
 			try {
@@ -66,19 +67,21 @@ export class StreamManager {
 				source.addEventListener("open", (e: any) => {
 					console.log("[ChatGPT MD] SSE Opened");
 
-					const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${headingPrefix}role::assistant\n\n`;
-					editor.replaceRange(newLine, editor.getCursor());
+					if (with_role) {
+						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${headingPrefix}role::assistant\n\n`;
+						editor.replaceRange(newLine, editor.getCursor());
 
-					// move cursor to end of line
-					const cursor = editor.getCursor();
-					const newCursor = {
-						line: cursor.line,
-						ch: cursor.ch + newLine.length,
-					};
-					editor.setCursor(newCursor);
+						// move cursor to end of line
+						const cursor = editor.getCursor();
+						const newCursor = {
+							line: cursor.line,
+							ch: cursor.ch + newLine.length,
+						};
+						editor.setCursor(newCursor);
 
-					initialCursorPosCh = newCursor.ch;
-					initialCursorPosLine = newCursor.line;
+						initialCursorPosCh = newCursor.ch;
+						initialCursorPosLine = newCursor.line;
+					}
 				});
 
 				source.addEventListener("message", (e: any) => {
@@ -138,16 +141,19 @@ export class StreamManager {
 						};
 						editor.setCursor(newCursor);
 
-						if (!setAtCursor) {
-							// remove the text after the cursor
-							editor.replaceRange("", newCursor, {
-								line: Infinity,
-								ch: Infinity,
-							});
-						} else {
-							new Notice(
-								"[ChatGPT MD] Text pasted at cursor may leave artifacts. Please remove them manually. ChatGPT MD cannot safely remove text when pasting at cursor."
-							);
+						if (with_role) {
+							if (!setAtCursor) {
+								// remove the text after the cursor
+								editor.replaceRange("", newCursor, {
+									line: Infinity,
+									ch: Infinity,
+								});
+							} else {
+								new Notice(
+									"[ChatGPT MD] Text pasted at cursor may leave artifacts. Please remove them manually. ChatGPT MD cannot safely remove text when pasting at cursor."
+								);
+							}
+
 						}
 
 						resolve(txt);

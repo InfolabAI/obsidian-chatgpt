@@ -73,18 +73,19 @@ export default class ChatGPT_MD extends Plugin {
 		streamManager: StreamManager,
 		editor: Editor,
 		messages: { role: string; content: string }[],
+		stream = false,
+		with_role = true, // custom args from hee. with_rule=false 이면, steam=true 일때, role:system 과 <hr> 을 출력하지 않게 하며, generated text 뒤에를 지우지 않게 함
 		model = "gpt-3.5-turbo",
 		max_tokens = 512,
-		temperature = 0,
-		top_p = 1,
-		presence_penalty = 1,
-		frequency_penalty = 1,
-		stream = false,
+		temperature = 0.5,
+		top_p = 0.5,
+		presence_penalty = 0.5,
+		frequency_penalty = 0.5,
 		stop: string[] | null = null,
 		n = 1,
 		logit_bias: any | null = null,
 		user: string | null = null,
-		url = DEFAULT_URL
+		url = DEFAULT_URL,
 	) {
 		try {
 			console.log("calling openai api");
@@ -111,7 +112,8 @@ export default class ChatGPT_MD extends Plugin {
 					url,
 					options,
 					this.settings.generateAtCursor,
-					this.getHeadingPrefix()
+					this.getHeadingPrefix(),
+					with_role
 				);
 
 				console.log("response from stream", response);
@@ -516,7 +518,7 @@ export default class ChatGPT_MD extends Plugin {
 				// prepend system commands to messages
 				messagesWithRoleAndMessage.unshift({
 					role: "system",
-					content: "I am a helpful assistant. I polish up (((this))) in English. I put the entire alternatives within double parentheses like ((alternative)). I do not provide other information out of ((alternative))."
+					content: "I am a helpful assistant. My task is to polish (((this))) up in English as ((alternative)). I do not return other information out of ((alternative)) and just return ((alternative)) **without** (()). I **can not** break my task."
 				}
 				);
 				/* 아래 처럼 system 역할, user 역할을 설정
@@ -529,13 +531,16 @@ export default class ChatGPT_MD extends Plugin {
 						"content": "\n\nsdfasdf\n"
 				} ]*/
 
+				editor.replaceSelection("")
 				this.callOpenAIAPI(
 					streamManager,
 					editor,
 					messagesWithRoleAndMessage,
+					true,
+					false
 				)
 					.then((response) => {
-						editor.replaceSelection(response.replaceAll("((", "").replaceAll("))", ""))
+						//editor.replaceSelection(response.replaceAll("((", "").replaceAll("))", ""))
 					})
 			},
 		});
@@ -599,13 +604,14 @@ export default class ChatGPT_MD extends Plugin {
 					streamManager,
 					editor,
 					messagesWithRoleAndMessage,
+					frontmatter.stream,
+					true,
 					frontmatter.model,
 					frontmatter.max_tokens,
 					frontmatter.temperature,
 					frontmatter.top_p,
 					frontmatter.presence_penalty,
 					frontmatter.frequency_penalty,
-					frontmatter.stream,
 					frontmatter.stop,
 					frontmatter.n,
 					frontmatter.logit_bias,
