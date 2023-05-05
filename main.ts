@@ -74,12 +74,12 @@ export default class ChatGPT_MD extends Plugin {
 		editor: Editor,
 		messages: { role: string; content: string }[],
 		model = "gpt-3.5-turbo",
-		max_tokens = 250,
-		temperature = 0.3,
+		max_tokens = 512,
+		temperature = 0,
 		top_p = 1,
-		presence_penalty = 0.5,
-		frequency_penalty = 0.5,
-		stream = true,
+		presence_penalty = 1,
+		frequency_penalty = 1,
+		stream = false,
 		stop: string[] | null = null,
 		n = 1,
 		logit_bias: any | null = null,
@@ -225,8 +225,8 @@ export default class ChatGPT_MD extends Plugin {
 				metaMatter?.stream !== undefined
 					? metaMatter.stream // If defined in frontmatter, use its value.
 					: this.settings.stream !== undefined
-					? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
-					: true; // Otherwise fallback on true.
+						? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
+						: true; // Otherwise fallback on true.
 
 			const temperature =
 				metaMatter?.temperature !== undefined
@@ -360,7 +360,7 @@ export default class ChatGPT_MD extends Plugin {
 	appendMessage(editor: Editor, role: string, message: string) {
 		/*
 		 append to bottom of editor file:
-		 	const newLine = `<hr class="__chatgpt_plugin">\n${this.getHeadingPrefix()}role::${role}\n\n${message}`;
+			  const newLine = `<hr class="__chatgpt_plugin">\n${this.getHeadingPrefix()}role::${role}\n\n${message}`;
 		*/
 
 		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::${role}\n\n${message}\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n`;
@@ -394,9 +394,8 @@ export default class ChatGPT_MD extends Plugin {
 				return;
 			}
 
-			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${
-				this.settings.inferTitleLanguage
-			}. \nMessages:\n\n${JSON.stringify(messages)}`;
+			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${this.settings.inferTitleLanguage
+				}. \nMessages:\n\n${JSON.stringify(messages)}`;
 
 			const titleMessage = [
 				{
@@ -497,6 +496,52 @@ export default class ChatGPT_MD extends Plugin {
 
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
+			id: "replace-with-chatGPT",
+			name: "Replace",
+			icon: "message-circle",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				let selectedText = editor.getSelection()
+				selectedText = `(((${selectedText})))`
+
+				let messages = this.splitMessages(selectedText); // split 하여 array 로 만듬
+
+				messages = messages.map((message) => {
+					return this.removeCommentsFromMessages(message);
+				}); // comment 를 삭제함
+
+				const messagesWithRoleAndMessage = messages.map((message) => {
+					return this.extractRoleAndMessage(message);
+				}); // role(e.g., user) 과 content (message) 를 지정함
+
+				// prepend system commands to messages
+				messagesWithRoleAndMessage.unshift({
+					role: "system",
+					content: "I am a helpful assistant. I polish up (((this))) in English. I put the entire alternatives within double parentheses like ((alternative)). I do not provide other information out of ((alternative))."
+				}
+				);
+				/* 아래 처럼 system 역할, user 역할을 설정
+				[ {
+						"role": "system",
+						"content": "I am a helpful assistant."
+					},
+					{
+						"role": "user",
+						"content": "\n\nsdfasdf\n"
+				} ]*/
+
+				this.callOpenAIAPI(
+					streamManager,
+					editor,
+					messagesWithRoleAndMessage,
+				)
+					.then((response) => {
+						editor.replaceSelection(response.replaceAll("((", "").replaceAll("))", ""))
+					})
+			},
+		});
+
+		// This adds an editor command that can perform some operation on the current editor instance
+		this.addCommand({
 			id: "call-chatgpt-api",
 			name: "Chat",
 			icon: "message-circle",
@@ -509,15 +554,15 @@ export default class ChatGPT_MD extends Plugin {
 				// get messages
 				const bodyWithoutYML = this.removeYMLFromMessage(
 					editor.getValue()
-				);
-				let messages = this.splitMessages(bodyWithoutYML);
+				); //frontmatter 제외한 나머지 text 추출
+				let messages = this.splitMessages(bodyWithoutYML); // split 하여 array 로 만듬
 				messages = messages.map((message) => {
 					return this.removeCommentsFromMessages(message);
-				});
+				}); // comment 를 삭제함
 
 				const messagesWithRoleAndMessage = messages.map((message) => {
 					return this.extractRoleAndMessage(message);
-				});
+				}); // role(e.g., user) 과 content (message) 를 지정함
 
 				if (frontmatter.system_commands) {
 					const systemCommands = frontmatter.system_commands;
@@ -530,11 +575,20 @@ export default class ChatGPT_MD extends Plugin {
 							};
 						})
 					);
+					/* 아래 처럼 system 역할, user 역할을 설정
+					[ {
+							"role": "system",
+							"content": "I am a helpful assistant."
+						},
+						{
+							"role": "user",
+							"content": "\n\nsdfasdf\n"
+					} ]*/
 				}
 
 				// move cursor to end of file if generateAtCursor is false
 				if (!this.settings.generateAtCursor) {
-					this.moveCursorToEndOfFile(editor);
+					this.moveCursorToEndOfFile(editor); //cursor 위치 조정 함수
 				}
 
 				if (Platform.isMobile) {
@@ -634,7 +688,7 @@ export default class ChatGPT_MD extends Plugin {
 										if (Platform.isMobile) {
 											new Notice(
 												"[ChatGPT MD] Error inferring title. " +
-													err,
+												err,
 												5000
 											);
 										}
@@ -648,7 +702,7 @@ export default class ChatGPT_MD extends Plugin {
 						if (Platform.isMobile) {
 							new Notice(
 								"[ChatGPT MD Mobile] Full Error calling API. " +
-									err,
+								err,
 								9000
 							);
 						}
@@ -887,7 +941,7 @@ export default class ChatGPT_MD extends Plugin {
 		this.addSettingTab(new ChatGPT_MDSettingsTab(this.app, this));
 	}
 
-	onunload() {}
+	onunload() { }
 
 	async loadSettings() {
 		this.settings = Object.assign(
