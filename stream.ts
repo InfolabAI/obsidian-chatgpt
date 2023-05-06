@@ -95,6 +95,9 @@ export class StreamManager {
 							return;
 						}
 
+						text = new ToAnki().prefixBeforeStream(text)
+						console.log(`stream.ts > <function> > "message" callback > not [Done] ${text}`)
+
 						const cursor = editor.getCursor();
 						const convPos = editor.posToOffset(cursor);
 
@@ -127,9 +130,10 @@ export class StreamManager {
 						if (with_role) {
 						}
 						else {
-							txt = new ToAnki().refineOutput(txt)
+							txt = new ToAnki().postfixAfterOutput(txt)
 
 							// replace the text from initialCursor to fix any formatting issues from streaming
+							console.log(`stream.ts > <function> > "message" callback > [Done] ${txt}`)
 							const cursor = editor.getCursor();
 							editor.replaceRange(
 								txt,

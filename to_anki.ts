@@ -20,10 +20,24 @@ export class ToAnki {
 	}
 
 	testFunction2() {
-		this.refineOutput("\"Due to the distribution shift in the graph data, there is a negative impact on the performance, which necessitates the need for out-of-distribution generalization. alternative: The shift in distribution of the graph data is negatively impacting performance, hence the need for out-of-distribution generalization.\'")
+		this.postfixAfterOutput("\"`then()` is a function of the `Promise` object that can be used to assign a callback function to handle the response. Due to the distribution shift in the graph data, there is a negative impact on the performance, which necessitates the need for out-of-distribution generalization. alternative: The shift in distribution of the graph data is negatively impacting performance, hence the need for out-of-distribution generalization. `sdflkj` aslfkjsdalkfj.`")
 	}
 
-	refineOutput(str: string): string {
+	testFunction3() {
+		console.log(this.BuildAnkiFormat("`then()` is a method of `Promise` to assign callback function for the response", "`then` is a method of a `Promise` object that allows you to assign a callback function to handle the response."))
+	}
+
+	testFunction4() {
+		console.log(this.replaceMatchedStringsToGetColor("`then()` is a function of the `Promise` object that can be used to assign a callback function to handle the response.", ["then()", "the", "object", "Promise"], "##cc0000"))
+	}
+
+
+	prefixBeforeStream(str: string): string {
+		str = str.replace(/`/g, "<|code|>") // Obsidian 은 " `" 를 적을 때 생략되는 문제가 있기에 다른 code 로 바꿔줌
+		return str
+	}
+
+	postfixAfterOutput(str: string): string {
 		console.log(str)
 
 		// refining
@@ -34,6 +48,18 @@ export class ToAnki {
 		str = str.replace(/^\"|\"$/g, "")
 		str = str.replace(/^\'|\'$/g, "")
 		console.log(`\nafter ${str}`)
+
+		// additional refining from prefix
+		str = str.replace(/\<\|code\|\>/g, "`")
+
+		// additional refining: 현재 ` 가 홀수이면서 맨 앞과 뒤에 ` 가 있을 때, 2개를 지우므로, 또 홀수가 되는 문제가 있어서 주석처리 함
+		/*
+		length = (str.match(/`/g) || []).length //exec() 는 동일한 match 는 하나만 return 하는데 match() 는 동일한 match 로 중복으로 return 해주기에 갯수를 셀 수 있음
+		console.log(length)
+		if (length % 2 !== 0) { // ` 의 짝이 안 맞는 경우에만 앞 뒤 ` 를 지우기 위한 식이고, (null || []) 는 [] 가 됨
+			str = str.replace(/^`|`$/g, "")
+		}
+		console.log(`\nafter ${str}`)*/
 
 		// additional refining
 		str = str.replace(/\(\(Alternative|Alternatives\)\)/g, "")
@@ -82,13 +108,20 @@ export class ToAnki {
 
 		// 각 요소를 순회하며 해당하는 부분을 찾아서 A로 대체
 		for (let i = 0; i < list.length; i++) {
+			// refine
+			let list_str = list[i].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") //정규식에서 사용되는 모든 기호 앞에 escape 를 붙이며, $& 는 match 된 전체 문자열을 의미함
+
+			console.log(`replaceMatchedStringsToGetColor > ${list_str}`)
+
 			// 각 요소의 앞뒤 공백은 없어야 하며(trim), 앞뒤가 일반문자(a-zA-z0-9_)가 아니고(\W), string 의 맨앞 또는 뒤(^ or $) 이어야 하며, 또한 string 일때는 escape 까지 해서 \\W 로 적어야 함
-			let regex_str1 = `(^${list[i].trim()})` // 시작일 때
+			let regex_str1 = `(^${list_str})` // 시작일 때
 			str = str.replace(new RegExp(regex_str1, 'g'), `<font color=${color}>$1</font>`);
-			let regex_str2 = `(\\W)(${list[i].trim()})(\\W)` // 중간일 때
-			str = str.replace(new RegExp(regex_str2, 'g'), `$1<font color=${color}>$2</font>$3`); // \\W 를 <> 의 밖에 둔다는 게 포인트인데, 만약 안에 두면 \\W 가 < 또는 > 일 때, HTML 코드가 꼬이기 때문
-			let regex_str3 = `(${list[i].trim()}$)`// 끝일 때
-			str = str.replace(new RegExp(regex_str3, 'g'), `<font color=${color}>$1</font>`);
+			let regex_str2 = `(\`${list_str}(?!<\\/font>|\`<\\/font>)\`)` // 코드 중간이면서 한번도 font 가 바뀐 적이 없을 때 match, 즉 `문자열` 은 match 하고, `문자열`</font> 는 match 하지 않음
+			str = str.replace(new RegExp(regex_str2, 'g'), `<font color=${color}>$1</font>`); // 코드인 `` 은 <font></font> 안에 와야 함. 그 이유는 <code></code> 안에 있는 모든 <> 는 &lt;&gt; 로 바꾸기 때문
+			let regex_str3 = `(?!\`)(\\W)(${list_str})(?!<\\/font>|\`|\`<\\/font>)(\\W)` // 코드가 아닌 중간이면서 한번도 font 가 바뀐 적이 없을 때
+			str = str.replace(new RegExp(regex_str3, 'g'), `$1<font color=${color}>$2</font>$3`); // \\W 를 <> 의 밖에 둔다는 게 포인트인데, 만약 안에 두면 \\W 가 < 또는 > 일 때, HTML 코드가 꼬이기 때문
+			let regex_str4 = `(${list_str}$)`// 끝일 때
+			str = str.replace(new RegExp(regex_str4, 'g'), `<font color=${color}>$1</font>`);
 			console.log(`after ${str}`)
 		}
 
