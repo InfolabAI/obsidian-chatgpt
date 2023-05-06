@@ -25,7 +25,7 @@ export class ToAnki {
 	}
 
 	testFunction3() {
-		console.log(this.BuildAnkiFormat("`then()` is a method of `Promise` to assign callback function for the response", "`then` is a method of a `Promise` object that allows you to assign a callback function to handle the response."))
+		console.log(this.BuildAnkiFormat("How to replace all the matched tokens without `replaceAll`", "How can I replace all occurrences of a pattern without using `replaceAll`?"))
 	}
 
 	testFunction4() {
@@ -103,9 +103,9 @@ export class ToAnki {
 		let added_array: string[] = []
 		let removed_array: string[] = []
 		diffResult.forEach(part => {
-			if (part.added) {
+			if (part.added && part.value.match(/\w/g) !== null) { // 기호만 있는 경우는 highlight 할 의미가 없으므로 제외한다
 				added_array = [...added_array, part.value]
-			} else if (part.removed) {
+			} else if (part.removed && part.value.match(/\w/g) !== null) { // 기호만 있는 경우는 highlight 할 의미가 없으므로 제외한다
 				removed_array = [...removed_array, part.value]
 			} else {
 			}
@@ -127,8 +127,13 @@ export class ToAnki {
 
 		// 각 요소를 순회하며 해당하는 부분을 찾아서 A로 대체
 		for (let i = 0; i < list.length; i++) {
+			if (list[i].trim() === "`") { // code 는 따로 처리하므로, ` 가 difference 인 경우는 제외한다
+				continue
+			}
+
 			// refine
 			let list_str = list[i].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") //정규식에서 사용되는 모든 기호 앞에 escape 를 붙이며, $& 는 match 된 전체 문자열을 의미함
+			list_str = list_str.replace("`", "") // code 는 따로 처리하므로, ` 를 highlight 에서 제외한다
 
 			console.log(`replaceMatchedStringsToGetColor > ${list_str}`)
 
