@@ -22,6 +22,7 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
+		"diff": "^5.1.0",
 		"sse": "github:mpetazzoni/sse.js"
 	}
 }

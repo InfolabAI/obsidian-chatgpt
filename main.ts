@@ -75,7 +75,7 @@ export default class ChatGPT_MD extends Plugin {
 		editor: Editor,
 		messages: { role: string; content: string }[],
 		stream = false,
-		with_role = true, // custom args from hee. with_rule=false 이면, steam=true 일때, role:system 과 <hr> 을 출력하지 않게 하며, generated text 뒤에를 지우지 않게 함
+		with_role = true, // custom args from hee. with_rule=false 이면, steam=true 일때, role:system 과 <hr> 을 출력하지 않게 하며, generated text 뒤에를 지우지 않게 하고, (()) 를 삭제함
 		model = "gpt-3.5-turbo",
 		max_tokens = 512,
 		temperature = 1,
