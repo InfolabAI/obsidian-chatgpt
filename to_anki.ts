@@ -36,6 +36,9 @@ export class ToAnki {
 		console.log(`\nafter ${str}`)
 
 		// additional refining
+		str = str.replace(/\(\(Alternative|Alternatives\)\)/g, "")
+
+		// additional refining
 		let regex = new RegExp("(?=Alternative|Alternatives)(.*?)\: (.*)", "gi") //Alternative 또는 Alternatives 가 앞에 있을 때, 뒤 match 를 시작하므로, group 1 에 Alternative 또느 Alternatives 가 할당됨
 		console.log(regex)
 		let matches = regex.exec(str)
