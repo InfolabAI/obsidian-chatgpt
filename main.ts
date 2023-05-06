@@ -503,7 +503,6 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Polish up",
 			icon: "message-circle",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-
 				let selectedText = editor.getSelection()
 				selectedText = selectedText.replace(/\[\[([^\[\]]*?)\|([^\[\]]*?)\]\]/g, "$2") // 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없도록 함. [[]] 가 유지되도록, 이 라인이 다음 라인보다 먼저와야 함.
 				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1")
@@ -542,7 +541,13 @@ export default class ChatGPT_MD extends Plugin {
 					editor,
 					messagesWithRoleAndMessage,
 					true,
-					false
+					false,
+					"gpt-3.5-turbo",
+					100,
+					1, // temperature: 0이면 input 이 동일하면, 동일한 output 만 나옴
+					0.1, // top_p: temperature 와 동일하지만, top_p 가 낮을수록 더욱 top 에 가까운 sample 만 선택하게 한다는 점에서 의미가 있으며, 이 값을 줄여서 output 의 variance 를 낮추어 postfixAfterOutput 을 수월하게 함
+					0, // presence_penalty 
+					0, // frequency_penalty 
 				)
 					.then((response) => {
 						//editor.replaceSelection(response.replaceAll("((", "").replaceAll("))", ""))

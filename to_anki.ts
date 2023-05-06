@@ -20,7 +20,8 @@ export class ToAnki {
 	}
 
 	testFunction2() {
-		this.postfixAfterOutput("\"`then()` is a function of the `Promise` object that can be used to assign a callback function to handle the response. Due to the distribution shift in the graph data, there is a negative impact on the performance, which necessitates the need for out-of-distribution generalization. alternative: The shift in distribution of the graph data is negatively impacting performance, hence the need for out-of-distribution generalization. `sdflkj` aslfkjsdalkfj.`")
+		this.postfixAfterOutput("\"((Alternative solution to replace all matching tokens without using <|code|>replaceAll<|code|>)). \n`then()` is a function of the `Promise` object that can be used to assign a callback function to handle the response. Due to the distribution shift in the graph data, there is a negative impact on the performance, which necessitates the need for out-of-distribution generalization. alternative: The shift in distribution of the graph data is negatively impacting performance, hence the need for out-of-distribution generalization. `sdflkj` aslfkjsdalkfj.`")
+		this.postfixAfterOutput("((Alternative)): How can I replace all matching tokens without using <|code|>replaceAll<|code|> function?")
 	}
 
 	testFunction3() {
@@ -38,10 +39,32 @@ export class ToAnki {
 	}
 
 	postfixAfterOutput(str: string): string {
-		console.log(str)
 
-		// refining
+		// additional refining
+		let regex = new RegExp("(?=Alternative|Alternatives|\\(\\(Alternative\\)\\)|\\(\\(Alternatives\\)\\))(.*?)\\: (.*)", "gi") //Alternative 또는 Alternatives 가 앞에 있을 때, 뒤 match 를 시작하므로, : 이전 (.*?) 에 Alternative 또느 Alternatives 가 할당됨
+		let matches = regex.exec(str)
+		console.log(`\nmatches ${matches}`)
+		if (matches !== null) {
+			str = matches[2]
+		}
+		console.log(`\nafter ${str}`)
+
+		// additional refining
+		if ((/\(\(.*?\)\)/gi.exec(str) || ['a'])[0] !== str) { //(()) 를 모두 지우는데, 전체 문장이 그런게 아닐때만 지움
+			str = str.replace(/\(\(.*?\)\)/gi, "")
+		}
+		console.log(`\nafter ${str}`)
+
+		// additional refining
+		str = str.replace(/\s-\s/gi, "")
+
+		// additional refining
+		str = str.replace("\n", " ") // 엔터 모두 없앰
+		console.log(`\nafter ${str}`)
+
+		// additional refining
 		str = str.replace(/^\(\(/g, "").replace(/\)\)$/g, "")
+		str = str.replace(/^\(\(\(/g, "").replace(/\)\)\)$/g, "")
 		console.log(`\nafter ${str}`)
 
 		// additional refining
@@ -52,6 +75,14 @@ export class ToAnki {
 		// additional refining from prefix
 		str = str.replace(/\<\|code\|\>/g, "`")
 
+		// additional refining
+		length = (str.match(/\. \w/g) || []).length //문장 간 마침표의 갯수
+		console.log(length)
+		if (length === 0) { // 문장 간 마침표가 없으면 마지막 마침표를 지운다(불릿에 사용될 때는 마지막 마침표 지우니까)
+			str = str.replace(/\.$/g, "")
+		}
+		console.log(`\nafter ${str}`)
+
 		// additional refining: 현재 ` 가 홀수이면서 맨 앞과 뒤에 ` 가 있을 때, 2개를 지우므로, 또 홀수가 되는 문제가 있어서 주석처리 함
 		/*
 		length = (str.match(/`/g) || []).length //exec() 는 동일한 match 는 하나만 return 하는데 match() 는 동일한 match 로 중복으로 return 해주기에 갯수를 셀 수 있음
@@ -61,20 +92,8 @@ export class ToAnki {
 		}
 		console.log(`\nafter ${str}`)*/
 
-		// additional refining
-		str = str.replace(/\(\(Alternative|Alternatives\)\)/g, "")
 
-		// additional refining
-		let regex = new RegExp("(?=Alternative|Alternatives)(.*?)\: (.*)", "gi") //Alternative 또는 Alternatives 가 앞에 있을 때, 뒤 match 를 시작하므로, group 1 에 Alternative 또느 Alternatives 가 할당됨
-		console.log(regex)
-		let matches = regex.exec(str)
-		console.log(`\nmatches ${matches}`)
-		if (matches !== null) {
-			str = matches[2]
-		}
-		console.log(`\nafter ${str}`)
-
-		return str
+		return str.trim()
 	}
 
 	getDiffRegex(a: string, b: string): [string[], string[]] {
