@@ -1,6 +1,7 @@
 import { Editor, Notice, Platform } from "obsidian";
 import { SSE } from "sse";
 import { unfinishedCodeBlock } from "helpers";
+import { ToAnki } from "to_anki";
 
 export interface OpenAIStreamPayload {
 	model: string;
@@ -94,12 +95,6 @@ export class StreamManager {
 							return;
 						}
 
-						if (with_role) {
-						}
-						else {
-							text = text.replace(/\(\(/g, "").replace(/\)\)/g, "")
-						}
-
 						const cursor = editor.getCursor();
 						const convPos = editor.posToOffset(cursor);
 
@@ -129,16 +124,22 @@ export class StreamManager {
 							txt += "\n```";
 						}
 
-						// replace the text from initialCursor to fix any formatting issues from streaming
-						const cursor = editor.getCursor();
-						editor.replaceRange(
-							txt,
-							{
-								line: initialCursorPosLine,
-								ch: initialCursorPosCh,
-							},
-							cursor
-						);
+						if (with_role) {
+						}
+						else {
+							txt = new ToAnki().refineOutput(txt)
+
+							// replace the text from initialCursor to fix any formatting issues from streaming
+							const cursor = editor.getCursor();
+							editor.replaceRange(
+								txt,
+								{
+									line: initialCursorPosLine,
+									ch: initialCursorPosCh,
+								},
+								cursor
+							);
+						}
 
 						// set cursor to end of replacement text
 						const newCursor = {

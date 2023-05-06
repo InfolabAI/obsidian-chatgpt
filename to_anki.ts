@@ -14,6 +14,39 @@ import {
 	Platform,
 } from "obsidian";
 export class ToAnki {
+	testFunction1() {
+		this.getDiffRegex("Graph data 의 distribution shift 로 인해 성능에 악영향이 있기 때문에 OOD Generalization 필요", "Due to the distribution shift in the graph data, OOD generalization is necessary to mitigate its negative impact on performance.")
+		console.log(this.BuildAnkiFormat("Graph data 의 distribution shift 로 인해 성능에 악영향이 있기 때문에 OOD Generalization 필요", "Due to the distribution shift in the graph data, OOD generalization is necessary to mitigate its negative impact on performance."))
+	}
+
+	testFunction2() {
+		this.refineOutput("\"Due to the distribution shift in the graph data, there is a negative impact on the performance, which necessitates the need for out-of-distribution generalization. alternative: The shift in distribution of the graph data is negatively impacting performance, hence the need for out-of-distribution generalization.\'")
+	}
+
+	refineOutput(str: string): string {
+		console.log(str)
+
+		// refining
+		str = str.replace(/^\(\(/g, "").replace(/\)\)$/g, "")
+		console.log(`\nafter ${str}`)
+
+		// additional refining
+		str = str.replace(/^\"|\"$/g, "")
+		str = str.replace(/^\'|\'$/g, "")
+		console.log(`\nafter ${str}`)
+
+		// additional refining
+		let regex = new RegExp("(?=Alternative|Alternatives)(.*?)\: (.*)", "gi") //Alternative 또는 Alternatives 가 앞에 있을 때, 뒤 match 를 시작하므로, group 1 에 Alternative 또느 Alternatives 가 할당됨
+		console.log(regex)
+		let matches = regex.exec(str)
+		console.log(`\nmatches ${matches}`)
+		if (matches !== null) {
+			str = matches[2]
+		}
+		console.log(`\nafter ${str}`)
+
+		return str
+	}
 
 	getDiffRegex(a: string, b: string): [string[], string[]] {
 		const diff = require('diff');
@@ -58,7 +91,6 @@ export class ToAnki {
 
 		return str;
 	}
-
 
 	BuildAnkiFormat(question: string, answer: string) {
 		question = question.replace(/(\(|\))/g, "")
