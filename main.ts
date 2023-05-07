@@ -336,7 +336,8 @@ export default class ChatGPT_MD extends Plugin {
 
 	extractRoleAndMessage(message: string) {
 		try {
-			if (message.includes("role::")) {
+			let matches = /\nrole\:\:[^\s]+?\n/g.exec(message)
+			if (matches !== null) {
 				const role = message.split("role::")[1].split("\n")[0].trim();
 				const content = message
 					.split("role::")[1]
@@ -521,14 +522,9 @@ export default class ChatGPT_MD extends Plugin {
 				let answer = ''
 				let anki_question = ''
 				if (ankiForVocab.num_definitions !== 1) { // definition 이 여러 개면 chatGPT 가 하나를 선택하게 함
-					let messages = this.splitMessages(definitions); // split 하여 array 로 만듬
-					messages = messages.map((message) => {
-						return this.removeCommentsFromMessages(message);
-					}); // comment 를 삭제함
+					let message = this.removeCommentsFromMessages(definitions);
 
-					const messagesWithRoleAndMessage = messages.map((message) => {
-						return this.extractRoleAndMessage(message);
-					}); // role(e.g., user) 과 content (message) 를 지정함
+					const messagesWithRoleAndMessage = [this.extractRoleAndMessage(message)]// role(e.g., user) 과 content (message) 를 지정함
 
 					// prepend system commands to messages
 					messagesWithRoleAndMessage.unshift({
@@ -588,17 +584,11 @@ export default class ChatGPT_MD extends Plugin {
 				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1") // [[]]처리
 				selectedText = selectedText.replace(/\[([^\[\]]+?)\]\(([^()]+?)\)/g, "$1") // []() 처리. 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없는 조건만 match 함
 
-				let selectedText_parenthesis = `(((${selectedText})))`
+				let selectedText_parenthesis = `((("${selectedText}")))` // ((())) 안에 "" 을 붙였을 때 안정적인 대답이 나오는 예제가 있었음
 
-				let messages = this.splitMessages(selectedText_parenthesis); // split 하여 array 로 만듬
+				selectedText_parenthesis = this.removeCommentsFromMessages(selectedText_parenthesis);
 
-				messages = messages.map((message) => {
-					return this.removeCommentsFromMessages(message);
-				}); // comment 를 삭제함
-
-				const messagesWithRoleAndMessage = messages.map((message) => {
-					return this.extractRoleAndMessage(message);
-				}); // role(e.g., user) 과 content (message) 를 지정함
+				const messagesWithRoleAndMessage = [this.extractRoleAndMessage(selectedText_parenthesis)]// role(e.g., user) 과 content (message) 를 지정함
 
 				// prepend system commands to messages
 				messagesWithRoleAndMessage.unshift({
