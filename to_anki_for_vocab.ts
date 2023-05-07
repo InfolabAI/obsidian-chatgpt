@@ -271,10 +271,12 @@ export class ToAnkiForVocab extends ToAnki {
 
 		//get difinitions
 		const definitions: string[] = [];
-		$('div[data-type-block="definition.title.type.cobuild"] div.def').each((i, el) => {
-			const def = $(el).text().trim();
-			const pureText = this.removeHtmlTags(def);
-			definitions.push(pureText);
+		$('div[data-type-block="definition.title.type.cobuild"] div.hom').each((_: any, el: any) => { // hom 마다 돌면서 hom 내 첫 번째 div.def 의 text 만 가져옴(hom 내에 여러 개의 div.def 가 있을 수 있기 때문)
+			const h2 = $(el).find('div.def').first();
+			const def = this.removeHtmlTags(h2.text().trim())
+			if (def !== "") {
+				definitions.push(def)
+			}
 		});
 		logWithLocation(definitions)
 
