@@ -13,6 +13,51 @@ import {
 	Platform,
 } from "obsidian";
 
+export class SuggestToAnkiCardNote extends SuggestModal<string> {
+	string_to_be_appended: string = ""
+	note_path: string = ""
+
+	constructor(app: App, string_to_be_appended: string, note_path: string) {
+		super(app);
+		this.string_to_be_appended = string_to_be_appended
+		this.note_path = note_path
+	}
+
+	getSuggestions(query: string): string[] | Promise<string[]> {
+		return ["To Anki Card Note", "Not to Anki Card Note"]
+	}
+
+	renderSuggestion(value: string, el: HTMLElement) {
+		el.createEl("div", { text: value })
+	}
+
+	onChooseSuggestion(item: string, evt: MouseEvent | KeyboardEvent) { // onChooseSuggestion 은 기본적으로 또 다른 thread 롤 돌아가므로, main thread 를 멈추는 waitForVariable 함수가 필요함
+		if (item == "To Anki Card Note") {
+			let file = this.openFileByPath(this.note_path)
+			this.appendToNote(file, this.string_to_be_appended)
+			new Notice(`The Anki card note is updated`);
+		}
+	}
+
+	openFileByPath(filePath: string): TFile {
+		// 경로의 md 파일 open
+		const file = app.vault.getAbstractFileByPath(filePath) as TFile;
+		if (file === null) {
+			new Notice(`There is no file at path ${filePath}. You need to create the file first.`);
+			throw new Error(`There is no file at path ${filePath}. You need to create the file first.`);
+		}
+
+		return file;
+	}
+
+	appendToNote(file: TFile, content: string): void {
+		// md 파일 뒤에 내용 추가
+		const currentContent = app.vault.append(file, content);
+		//const newContent = `${content}\n${currentContent}`;
+		//app.vault.modify(file, newContent);
+	}
+}
+
 export class ToAnki {
 
 	removeHtmlTags(str: string): string {
@@ -53,22 +98,5 @@ export class ToAnki {
 		return [added_array, removed_array]
 	}
 
-	openFileByPath(filePath: string): TFile {
-		// 경로의 md 파일 open
-		const file = app.vault.getAbstractFileByPath(filePath) as TFile;
-		if (file === null) {
-			new Notice(`There is no file at path ${filePath}. You need to create the file first.`);
-			throw new Error(`There is no file at path ${filePath}. You need to create the file first.`);
-		}
-
-		return file;
-	}
-
-	appendToNote(file: TFile, content: string): void {
-		// md 파일 뒤에 내용 추가
-		const currentContent = app.vault.append(file, content);
-		//const newContent = `${content}\n${currentContent}`;
-		//app.vault.modify(file, newContent);
-	}
 
 }

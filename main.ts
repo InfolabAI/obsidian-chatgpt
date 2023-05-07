@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { logWithLocation } from 'utils';
+import { SuggestToAnkiCardNote } from 'to_anki';
 import {
 	App,
 	Editor,
@@ -564,11 +565,11 @@ export default class ChatGPT_MD extends Plugin {
 				}
 				else {
 					answer = definitions
+					new Notice(answer, 15000)
 					anki_question = `${paragraph}\n\nOptions:\n${answer}`
 				}
 				logWithLocation(answer)
-				let file = ankiForVocab.openFileByPath("3. Private/Anki Cards (Vocab).md")
-				ankiForVocab.appendToNote(file, ankiForVocab.BuildAnkiFormat(anki_question, answer))
+				await new SuggestToAnkiCardNote(app, ankiForVocab.BuildAnkiFormat(anki_question, answer), "3. Private/Anki Cards (Vocab).md").open()
 				new Notice("All done!!")
 
 			}
@@ -629,11 +630,11 @@ export default class ChatGPT_MD extends Plugin {
 					0, // presence_penalty 
 					0, // frequency_penalty 
 				)
-					.then((response) => {
+					.then(async (response) => {
 						//editor.replaceSelection(response.replaceAll("((", "").replaceAll("))", ""))
 						let anki = new ToAnkiForPolishUp()
-						let file = anki.openFileByPath("3. Private/Anki Cards (English).md")
-						anki.appendToNote(file, anki.BuildAnkiFormat(selectedText, response.fullstr))
+						await new SuggestToAnkiCardNote(app, anki.BuildAnkiFormat(selectedText, response.fullstr), "3. Private/Anki Cards (English).md").open()
+						new Notice("All done!!")
 					})
 			},
 		});

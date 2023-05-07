@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import axios from 'axios';
 import cheerio from 'cheerio';
-import { logWithLocation } from 'utils';
+import { logWithLocation, waitForVariable } from 'utils';
 import {
 	App,
 	Editor,
@@ -18,7 +18,6 @@ import {
 	Platform,
 } from "obsidian";
 import { ToAnki } from 'to_anki';
-import { stringify } from 'querystring';
 
 interface Word { // 이것을 객체로 만들어야 하는게 아니라, SuggestModal 에게 이런 형태를 처리하라는 약속을 보내는 것 뿐임
 	word_str: string
@@ -59,21 +58,6 @@ export class SuggestWords extends SuggestModal<Word> {
 	onChooseSuggestion(item: Word, evt: MouseEvent | KeyboardEvent) { // onChooseSuggestion 은 기본적으로 또 다른 thread 롤 돌아가므로, main thread 를 멈추는 waitForVariable 함수가 필요함
 		new Notice(`Selected ${item.word_str}`);
 		this.selected_word.word_str = item.word_str
-	}
-
-	async waitForVariable<T>( // variable 이 initialValue 가 아닐 때까지 기다리는 함수이며, 비동기 프로그램이라서 필요
-		variable: () => T,
-		initialValue: T,
-		intervalTime: number = 1000
-	): Promise<void> {
-		return new Promise<void>((resolve) => {
-			const intervalId = setInterval(() => {
-				if (variable() !== initialValue) {
-					clearInterval(intervalId);
-					resolve();
-				}
-			}, intervalTime);
-		});
 	}
 }
 
@@ -235,14 +219,14 @@ export class ToAnkiForVocab extends ToAnki {
 			});
 
 		// 아예 page 가 없는 경우
-		if (suggestedWords.length === 0) {
-			suggestedWords = $('.suggested_words .columns2 li') // 아예 page 가 없는 경우
-				.toArray()
+		let not_supported_word_page_elements = $('.suggested_words .columns2 li').toArray()
+		if (not_supported_word_page_elements.length !== 0) {
+			suggestedWords = not_supported_word_page_elements
 				.map((li: any) => $(li).text().trim());
-		}
-		else {
+		} else {
 			suggestedWords = [KEEP_GOING + this.searched_word, ...suggestedWords]
 		}
+
 		return suggestedWords;
 	}
 
@@ -258,7 +242,7 @@ export class ToAnkiForVocab extends ToAnki {
 		// suggestion 중에 하나를 골라 그 정보를 이용함
 		let suggestWord = new SuggestWords(app, this.getSuggestedWords($))
 		suggestWord.open()
-		await suggestWord.waitForVariable(() => suggestWord.selected_word.word_str, "")
+		await waitForVariable(() => suggestWord.selected_word.word_str, "")
 		if (suggestWord.selected_word.word_str == KEEP_GOING + this.searched_word) {
 		} else if (suggestWord.selected_word.word_str == QUIT) {
 			throw new Error('QUIT by USER')
@@ -294,7 +278,7 @@ export class ToAnkiForVocab extends ToAnki {
 		let ret = ''
 		for (let [i, [g, d]] of this.zip(gramGrps, definitions).entries()) {
 			//ret += `<font color=#0096ff>[${g}]</font> ${d}<br>`
-			let def = `${i}. [${g}] ${d.replace(/\n/g, "")}\n`
+			let def = `${i + 1}. [${g}] ${d.replace(/\n/g, "")}\n`
 			ret += def
 			this.definition_array.push(def)
 			this.num_definitions++

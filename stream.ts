@@ -85,7 +85,7 @@ export class StreamManager {
 					}
 				});
 
-				let notice = new Notice("")
+				let notice = new Notice("", 30000)
 				source.addEventListener("message", (e: any) => {
 					if (e.data != "[DONE]") {
 						const payload = JSON.parse(e.data);
