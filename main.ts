@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
+import { logWithLocation } from 'utils';
 import {
 	App,
 	Editor,
@@ -14,7 +15,8 @@ import {
 	Platform,
 } from "obsidian";
 
-import { ToAnki } from './to_anki'
+import { ToAnkiForPolishUp } from './to_anki_for_polish_up'
+import { ToAnkiForVocab } from "to_anki_for_vocab";
 import { StreamManager } from "./stream";
 import {
 	unfinishedCodeBlock,
@@ -74,8 +76,8 @@ export default class ChatGPT_MD extends Plugin {
 		streamManager: StreamManager,
 		editor: Editor,
 		messages: { role: string; content: string }[],
-		stream = false,
-		with_role = true, // custom args from hee. with_rule=false 이면, steam=true 일때, role:system 과 <hr> 을 출력하지 않게 하며, generated text 뒤에를 지우지 않게 하고, (()) 를 삭제함
+		stream = true,
+		rule_for_process = 'Chat', // custom args from hee. with_rule=false 이면, steam=true 일때, role:system 과 <hr> 을 출력하지 않게 하며, generated text 뒤에를 지우지 않게 하고, (()) 를 삭제함
 		model = "gpt-3.5-turbo",
 		max_tokens = 512,
 		temperature = 1,
@@ -114,7 +116,7 @@ export default class ChatGPT_MD extends Plugin {
 					options,
 					this.settings.generateAtCursor,
 					this.getHeadingPrefix(),
-					with_role
+					rule_for_process
 				);
 
 				console.log("response from stream", response);
@@ -377,7 +379,7 @@ export default class ChatGPT_MD extends Plugin {
 				/=begin-chatgpt-md-comment[\s\S]*?=end-chatgpt-md-comment/g;
 
 			// remove comment block
-			const newMessage = message.replace(commentBlock, "");
+			const newMessage = message.replace(commentBlock, "").replace(/%%.*?%%/g, "")
 
 			return newMessage;
 		} catch (err) {
@@ -496,6 +498,82 @@ export default class ChatGPT_MD extends Plugin {
 		await this.loadSettings();
 
 		const streamManager = new StreamManager();
+		this.addCommand({
+			id: "test",
+			name: "Test",
+			icon: "message-circle",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				//new ToAnkiForVocab(editor, "").testFunction2()
+				new ToAnkiForPolishUp().testFunction1()
+				return
+			}
+		}
+		);
+
+		this.addCommand({
+			id: "vocab-to-chatGPT",
+			name: "Vocab to ChatGPT",
+			icon: "message-circle",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				let ankiForVocab = new ToAnkiForVocab(editor, editor.getSelection())
+				let [paragraph, definitions] = await ankiForVocab.buildQuestionToChatGPT()
+				let answer = ''
+				let anki_question = ''
+				if (ankiForVocab.num_definitions !== 1) { // definition 이 여러 개면 chatGPT 가 하나를 선택하게 함
+					let messages = this.splitMessages(definitions); // split 하여 array 로 만듬
+					messages = messages.map((message) => {
+						return this.removeCommentsFromMessages(message);
+					}); // comment 를 삭제함
+
+					const messagesWithRoleAndMessage = messages.map((message) => {
+						return this.extractRoleAndMessage(message);
+					}); // role(e.g., user) 과 content (message) 를 지정함
+
+					// prepend system commands to messages
+					messagesWithRoleAndMessage.unshift({
+						role: "system",
+						content: "I am a native English speaker and a professional. My task is to select **one** of options that represents the most similar definition to (((this))) in the paragraph. I **cannot** provide any additional information except for the selected **full** option and a brief explanation of why I selected the option. I am **not permitted** to deviate from my task." + "The paragraph is\n" + paragraph
+					}
+					);
+					/* 아래 처럼 system 역할, user 역할을 설정
+					[ {
+							"role": "system",
+							"content": "I am a helpful assistant."
+						},
+						{
+							"role": "user",
+							"content": "\n\nsdfasdf\n"
+					} ]*/
+					await this.callOpenAIAPI(
+						streamManager,
+						editor,
+						messagesWithRoleAndMessage,
+						true,
+						'GetDef',
+						"gpt-3.5-turbo",
+						100,
+						1, // temperature: 0이면 input 이 동일하면, 동일한 output 만 나옴
+						0.1, // top_p: temperature 와 동일하지만, top_p 가 낮을수록 더욱 top 에 가까운 sample 만 선택하게 한다는 점에서 의미가 있으며, 이 값을 줄여서 output 의 variance 를 낮추어 postfixAfterOutput 을 수월하게 함
+						0, // presence_penalty 
+						0, // frequency_penalty 
+					)
+						.then((response) => {
+							answer = response.fullstr
+							anki_question = `${paragraph}\n\n[Randomly selected options (including the correct option) from original ${ankiForVocab.num_definitions} options]\n${ankiForVocab.getMostSimilarDefinitions(answer)}`
+						})
+				}
+				else {
+					answer = definitions
+					anki_question = `${paragraph}\n\nOptions:\n${answer}`
+				}
+				logWithLocation(answer)
+				let file = ankiForVocab.openFileByPath("3. Private/Anki Cards (Vocab).md")
+				ankiForVocab.appendToNote(file, ankiForVocab.BuildAnkiFormat(anki_question, answer))
+				new Notice("All done!!")
+
+			}
+		}
+		);
 
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
@@ -504,9 +582,11 @@ export default class ChatGPT_MD extends Plugin {
 			icon: "message-circle",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				let selectedText = editor.getSelection()
-				selectedText = selectedText.replace(/\[\[([^\[\]]*?)\|([^\[\]]*?)\]\]/g, "$2") // 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없도록 함. [[]] 가 유지되도록, 이 라인이 다음 라인보다 먼저와야 함.
-				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1")
-				selectedText = selectedText.replace(/\[([^\[\]]+?)\]\(([^()]+?)\)/g, "$1") // 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없도록 함
+				//preprocessing
+				selectedText = selectedText.replace(/\[\[([^\[\]]*?)\|([^\[\]]*?)\]\]/g, "$2") // [[|]] 처리. 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없는 조건만 match 함. [[]] 가 유지되기 위해서는 이 라인이 다음 라인보다 먼저와야 함.
+				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1") // [[]]처리
+				selectedText = selectedText.replace(/\[([^\[\]]+?)\]\(([^()]+?)\)/g, "$1") // []() 처리. 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없는 조건만 match 함
+
 				let selectedText_parenthesis = `(((${selectedText})))`
 
 				let messages = this.splitMessages(selectedText_parenthesis); // split 하여 array 로 만듬
@@ -541,7 +621,7 @@ export default class ChatGPT_MD extends Plugin {
 					editor,
 					messagesWithRoleAndMessage,
 					true,
-					false,
+					'Polish',
 					"gpt-3.5-turbo",
 					100,
 					1, // temperature: 0이면 input 이 동일하면, 동일한 output 만 나옴
@@ -551,7 +631,7 @@ export default class ChatGPT_MD extends Plugin {
 				)
 					.then((response) => {
 						//editor.replaceSelection(response.replaceAll("((", "").replaceAll("))", ""))
-						let anki = new ToAnki
+						let anki = new ToAnkiForPolishUp()
 						let file = anki.openFileByPath("3. Private/Anki Cards (English).md")
 						anki.appendToNote(file, anki.BuildAnkiFormat(selectedText, response.fullstr))
 					})
@@ -618,7 +698,7 @@ export default class ChatGPT_MD extends Plugin {
 					editor,
 					messagesWithRoleAndMessage,
 					frontmatter.stream,
-					true,
+					'Chat',
 					frontmatter.model,
 					frontmatter.max_tokens,
 					frontmatter.temperature,
@@ -1010,15 +1090,17 @@ export class ChatTemplates extends SuggestModal<ChatTemplate> {
 		const chatTemplateFiles = this.getFilesInChatFolder();
 
 		if (query == "") {
-			return chatTemplateFiles.map((file) => {
+			let ret = chatTemplateFiles.map((file) => {
 				return {
 					title: file.basename,
 					file: file,
 				};
 			});
+			console.log(`ChatTemplates > getSuggestions() > query==="" > ${typeof ret} ${ret}`)
+			return ret
 		}
 
-		return chatTemplateFiles
+		let ret = chatTemplateFiles
 			.filter((file) => {
 				return file.basename
 					.toLowerCase()
@@ -1030,10 +1112,14 @@ export class ChatTemplates extends SuggestModal<ChatTemplate> {
 					file: file,
 				};
 			});
+		console.log(`ChatTemplates > getSuggestions() > query > ${typeof ret} ${ret}`)
+		return ret
+
 	}
 
 	// Renders each suggestion item.
 	renderSuggestion(template: ChatTemplate, el: HTMLElement) {
+		console.log(`ChatTemplates > renderSuggestion() > ${template.title}`)
 		el.createEl("div", { text: template.title });
 	}
 

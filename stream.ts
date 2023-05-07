@@ -1,7 +1,7 @@
 import { Editor, Notice, Platform } from "obsidian";
 import { SSE } from "sse";
 import { unfinishedCodeBlock } from "helpers";
-import { ToAnki } from "to_anki";
+import { ToAnkiForPolishUp } from "to_anki_for_polish_up";
 
 export interface OpenAIStreamPayload {
 	model: string;
@@ -44,7 +44,7 @@ export class StreamManager {
 		options: OpenAIStreamPayload,
 		setAtCursor: boolean,
 		headingPrefix: string,
-		with_role: boolean
+		rule_for_process: string
 	) => {
 		return new Promise((resolve, reject) => {
 			try {
@@ -68,7 +68,7 @@ export class StreamManager {
 				source.addEventListener("open", (e: any) => {
 					console.log("[ChatGPT MD] SSE Opened");
 
-					if (with_role) {
+					if (rule_for_process === 'Chat') { // 가로줄 만드는 과정
 						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${headingPrefix}role::assistant\n\n`;
 						editor.replaceRange(newLine, editor.getCursor());
 
@@ -85,6 +85,7 @@ export class StreamManager {
 					}
 				});
 
+				let notice = new Notice("")
 				source.addEventListener("message", (e: any) => {
 					if (e.data != "[DONE]") {
 						const payload = JSON.parse(e.data);
@@ -95,30 +96,37 @@ export class StreamManager {
 							return;
 						}
 
-						text = new ToAnki().prefixBeforeStream(text)
-						console.log(`stream.ts > <function> > "message" callback > not [Done] ${text}`)
-
-						const cursor = editor.getCursor();
-						const convPos = editor.posToOffset(cursor);
-
-						// @ts-ignore
-						const cm6 = editor.cm;
-						const transaction = cm6.state.update({
-							changes: {
-								from: convPos,
-								to: convPos,
-								insert: text,
-							},
-						});
-						cm6.dispatch(transaction);
+						if (rule_for_process === 'Polish') {
+							text = new ToAnkiForPolishUp().prefixBeforeStream(text)
+							console.log(`stream.ts > <function> > "message" callback > not [Done] ${text}`)
+						}
 
 						txt += text;
 
-						const newCursor = {
-							line: cursor.line,
-							ch: cursor.ch + text.length,
-						};
-						editor.setCursor(newCursor);
+						if (rule_for_process === 'Polish' || rule_for_process === 'Chat') {
+							const cursor = editor.getCursor();
+							const convPos = editor.posToOffset(cursor);
+
+							// @ts-ignore
+							const cm6 = editor.cm;
+							const transaction = cm6.state.update({
+								changes: {
+									from: convPos,
+									to: convPos,
+									insert: text,
+								},
+							});
+							cm6.dispatch(transaction);
+
+							const newCursor = {
+								line: cursor.line,
+								ch: cursor.ch + text.length,
+							};
+							editor.setCursor(newCursor);
+						}
+						else if (rule_for_process === 'GetDef') {
+							notice.setMessage(txt)
+						}
 					} else {
 						source.close();
 						console.log("[ChatGPT MD] SSE Closed");
@@ -127,10 +135,10 @@ export class StreamManager {
 							txt += "\n```";
 						}
 
-						if (with_role) {
+						if (rule_for_process === 'Chat') {
 						}
-						else {
-							txt = new ToAnki().postfixAfterOutput(txt)
+						else if (rule_for_process === 'Polish') {
+							txt = new ToAnkiForPolishUp().postfixAfterOutput(txt)
 
 							// replace the text from initialCursor to fix any formatting issues from streaming
 							console.log(`stream.ts > <function> > "message" callback > [Done] ${txt}`)
@@ -145,16 +153,15 @@ export class StreamManager {
 							);
 						}
 
-						// set cursor to end of replacement text
-						const newCursor = {
-							line: initialCursorPosLine,
-							ch: initialCursorPosCh + txt.length,
-						};
-						editor.setCursor(newCursor);
 
-						if (with_role) {
-							if (!setAtCursor) {
-								// remove the text after the cursor
+						if (rule_for_process === 'Chat') {
+							// set cursor to end of replacement text
+							const newCursor = {
+								line: initialCursorPosLine,
+								ch: initialCursorPosCh + txt.length,
+							};
+							editor.setCursor(newCursor);
+							if (!setAtCursor) { // remove the text after the cursor
 								editor.replaceRange("", newCursor, {
 									line: Infinity,
 									ch: Infinity,
