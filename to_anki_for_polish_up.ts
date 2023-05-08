@@ -114,7 +114,7 @@ export class ToAnkiForPolishUp extends ToAnki {
 			}
 
 			// refine
-			let list_str = list[i].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") //정규식에서 사용되는 모든 기호 앞에 escape 를 붙이며, $& 는 match 된 전체 문자열을 의미함
+			let list_str = list[i].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\\\$&") //정규식에서 사용되는 모든 기호 앞에 escape 를 붙이며, $& 는 match 된 전체 문자열을 의미하는데, 다시 문자열에 들어가므로 \\ \\ 로 두 개 붙임
 			list_str = list_str.replace("`", "") // code 는 따로 처리하므로, ` 를 highlight 에서 제외한다
 
 			console.log(`replaceMatchedStringsToGetColor > ${list_str}`)
@@ -149,9 +149,10 @@ export class ToAnkiForPolishUp extends ToAnki {
 		hint = this.replaceMatchedStringsToGetColor(hint, added_array, "#0096ff")
 		hint = `<br>(${hint})`
 
+		let anki_head = question
 		question += ` ${hint}`
 		question = `[Polish up this in English] ${question}`
 
-		return `%%<br>STARTI [Basic(MD)] ${question} Back: ${answer} %%` + `%% ENDI %%\n`
+		return `- ${anki_head}%%<br>STARTI [Basic(MD)] ${question} Back: ${answer} %%` + `%% ENDI %%\n`
 	}
 }

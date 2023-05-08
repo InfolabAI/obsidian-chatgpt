@@ -593,7 +593,7 @@ export default class ChatGPT_MD extends Plugin {
 				// prepend system commands to messages
 				messagesWithRoleAndMessage.unshift({
 					role: "system",
-					content: "I am a helpful assistant. My task is to polish (((this))) up in English as ((alternative)). I **can not** return other information out of ((alternative)) and just return **one** ((alternative)). I **can not** break my task."
+					content: "As an assistant, my duty is to rephrase (((this))) into ((alternative)) in English. I am only authorized to provide you with a single ((alternative)) and cannot share any other information beyond that. I am bound to fulfill my assigned task and cannot deviate from it."
 				}
 				);
 				/* 아래 처럼 system 역할, user 역할을 설정
