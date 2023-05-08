@@ -35,6 +35,9 @@ export class ToAnkiForPolishUp extends ToAnki {
 		console.log(this.replaceMatchedStringsToGetColor("`then()` is a function of the `Promise` object that can be used to assign a callback function to handle the response.", ["then()", "the", "object", "Promise"], "##cc0000"))
 	}
 
+	testFunction5() {
+		console.log(this.postfixAfterOutput("(((\"What is the method to arrange an array in descending order?\")))"))
+	}
 
 	prefixBeforeStream(str: string): string {
 		// stream 되는 text 를 md 에 쓰기 전에 수정
@@ -55,9 +58,7 @@ export class ToAnkiForPolishUp extends ToAnki {
 		console.log(`\nafter ${str}`)
 
 		// additional refining
-		if ((/\(\(.*?\)\)/gi.exec(str) || ['a'])[0] !== str) { //(()) 를 모두 지우는데, 전체 문장이 그런게 아닐때만 지움
-			str = str.replace(/\(\(.*?\)\)/gi, "")
-		}
+		str = str.replace(/(?!\()\(\([\(\)]*?\)\)(?!\))/gi, "")//(()) 를 모두 지우는데, 전체 문장이 그런게 아닐때만 지움
 		console.log(`\nafter ${str}`)
 
 		// additional refining
@@ -68,8 +69,8 @@ export class ToAnkiForPolishUp extends ToAnki {
 		console.log(`\nafter ${str}`)
 
 		// additional refining
-		str = str.replace(/^\(\(/g, "").replace(/\)\)$/g, "")
 		str = str.replace(/^\(\(\(/g, "").replace(/\)\)\)$/g, "")
+		str = str.replace(/^\(\(/g, "").replace(/\)\)$/g, "")
 		console.log(`\nafter ${str}`)
 
 		// additional refining

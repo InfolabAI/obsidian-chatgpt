@@ -506,7 +506,7 @@ export default class ChatGPT_MD extends Plugin {
 			icon: "message-circle",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				//new ToAnkiForVocab(editor, "").testFunction2()
-				new ToAnkiForPolishUp().testFunction1()
+				new ToAnkiForPolishUp().testFunction5()
 				return
 			}
 		}
