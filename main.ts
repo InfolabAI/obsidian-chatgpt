@@ -574,6 +574,58 @@ export default class ChatGPT_MD extends Plugin {
 
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
+			id: "check-the-grammar-with-chatGPT",
+			name: "Check the grammar",
+			icon: "message-circle",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				let selectedText = editor.getSelection()
+				//preprocessing
+				selectedText = selectedText.replace(/\[\[([^\[\]]*?)\|([^\[\]]*?)\]\]/g, "$2") // [[|]] 처리. 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없는 조건만 match 함. [[]] 가 유지되기 위해서는 이 라인이 다음 라인보다 먼저와야 함.
+				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1") // [[]]처리
+				selectedText = selectedText.replace(/\[([^\[\]]+?)\]\(([^()]+?)\)/g, "$1") // []() 처리. 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없는 조건만 match 함
+
+				let selectedText_parenthesis = `"${selectedText}"` // ((())) 안에 "" 을 붙였을 때 안정적인 대답이 나오는 예제가 있었음
+
+				selectedText_parenthesis = this.removeCommentsFromMessages(selectedText_parenthesis);
+
+				const messagesWithRoleAndMessage = [this.extractRoleAndMessage(selectedText_parenthesis)]// role(e.g., user) 과 content (message) 를 지정함
+
+				// prepend system commands to messages
+				messagesWithRoleAndMessage.unshift({
+					role: "system",
+					content: "As an assistant, my duty is to check the grammar of given sentences and to identify any grammatical errors. I am bound to fulfill my assigned task and cannot deviate from it."
+				}
+				);
+				/* 아래 처럼 system 역할, user 역할을 설정
+				[ {
+						"role": "system",
+						"content": "I am a helpful assistant."
+					},
+					{
+						"role": "user",
+						"content": "\n\nsdfasdf\n"
+				} ]*/
+
+				this.callOpenAIAPI(
+					streamManager,
+					editor,
+					messagesWithRoleAndMessage,
+					true,
+					'GetDef',
+					"gpt-3.5-turbo",
+					100,
+					1, // temperature: 0이면 input 이 동일하면, 동일한 output 만 나옴
+					0.1, // top_p: temperature 와 동일하지만, top_p 가 낮을수록 더욱 top 에 가까운 sample 만 선택하게 한다는 점에서 의미가 있으며, 이 값을 줄여서 output 의 variance 를 낮추어 postfixAfterOutput 을 수월하게 함
+					0, // presence_penalty 
+					0, // frequency_penalty 
+				)
+					.then(async (response) => {
+					})
+			},
+		});
+
+		// This adds an editor command that can perform some operation on the current editor instance
+		this.addCommand({
 			id: "polish-up-with-chatGPT",
 			name: "Polish up",
 			icon: "message-circle",
