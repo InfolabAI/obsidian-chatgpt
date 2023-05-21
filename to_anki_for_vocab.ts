@@ -164,12 +164,23 @@ export class ToAnkiForVocab extends ToAnki {
 
 	BuildAnkiFormat(question: string, answer: string) {
 		// Anki 카드 format 을 만들어 return
+
+		// preprocessing: 이미 색이 있는 모든 단어들을 색이 없게 함
+		question = question.replace(/<font color=.*?>(.*?)<\/font>/g, `$1`)
+		question = question.replace(/\*\*(.*?)\*\*/g, `$1`)
+		answer = answer.replace(/<font color=.*?>(.*?)<\/font>/g, `$1`)
+		answer = answer.replace(/\*\*(.*?)\*\*/g, `$1`)
+
 		let additional_term = ""
 		if (this.selected_word !== this.searched_word) {
 			additional_term = `(Searched by <font color=#cc0000>${this.searched_word}</font>)`
 		}
 
 		question = question.replace(/\(\(\((.*?)\)\)\)/g, `<font color=#0096ff>**$1**</font>${additional_term}`)
+
+		//TTS
+		question = question.replace(/^([\s\S]+)(\[Random.*?options\])([\s\S]+)$/g, (match, p1, ranop, p2) => this.html_TTS(p1) + ranop + this.html_TTS(p2))
+		answer = this.html_TTS(answer)
 
 		question = `<font color="green">**[Predict the definition of highlighted text]**</font>\n${question}`
 
@@ -178,6 +189,7 @@ export class ToAnkiForVocab extends ToAnki {
 		answer = answer.replace(/\n/g, "<br>")
 		question = question.replace(/(\[Random.*?options\])/g, `<font color="green">**$1**</font>`)
 		question = question.replace(/\<br\>(\d+\.\s+\[.*?\])/g, `<br><font color=#c0c0c0>$1</font>`)
+
 		return `- ${this.selected_word}${additional_term}^[%%<br>STARTI [Basic(MD)] ${question} Back: ${answer} %%` + `%% ENDI %%]\n`
 	}
 

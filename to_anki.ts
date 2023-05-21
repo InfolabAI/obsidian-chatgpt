@@ -59,6 +59,9 @@ export class SuggestToAnkiCardNote extends SuggestModal<string> {
 }
 
 export class ToAnki {
+	html_TTS(str: string) {
+		return `<tts service="android" voice="en_US"> ${str} </tts>`
+	}
 
 	removeHtmlTags(str: string): string {
 		// str 내 모든 HTML tags 제거

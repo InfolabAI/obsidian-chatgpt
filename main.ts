@@ -505,12 +505,12 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Test",
 			icon: "message-circle",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				//new ToAnkiForVocab(editor, "").testFunction2()
 				new ToAnkiForPolishUp().testFunction5()
 				return
 			}
 		}
 		);
+
 
 		this.addCommand({
 			id: "vocab-to-chatGPT",
@@ -571,6 +571,7 @@ export default class ChatGPT_MD extends Plugin {
 			}
 		}
 		);
+
 
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({

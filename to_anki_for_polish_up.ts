@@ -32,7 +32,6 @@ export class ToAnkiForPolishUp extends ToAnki {
 	}
 
 	testFunction4() {
-		console.log(this.replaceMatchedStringsToGetColor("`then()` is a function of the `Promise` object that can be used to assign a callback function to handle the response.", ["then()", "the", "object", "Promise"], "##cc0000"))
 	}
 
 	testFunction5() {
@@ -102,11 +101,19 @@ export class ToAnkiForPolishUp extends ToAnki {
 		return str.trim()
 	}
 
-	replaceMatchedStringsToGetColor(str: string, list: string[], color: string): string {
+	replaceMatchedStringsToGetColor(str: string, list: string[], color: string, mode: string): string {
 		// 삭제되거나 추가된 주요 단어들을 highlight 하여 return
 
-		// 짧은 단어가 그 단어를 포함하는 긴 단어에 영향을 주지 않도록, list를 역순으로 정렬하여 가장 긴 부분부터 바꾸도록 함
-		list.sort((a, b) => b.length - a.length);
+		let rep1 = ""
+		let rep2 = ""
+		if (mode == "color") {
+			rep1 = `$1`
+			rep2 = `$2`
+		}
+		else if (mode == "space") {
+			rep1 = `( )`
+			rep2 = `( )`
+		}
 
 		// 각 요소를 순회하며 해당하는 부분을 찾아서 A로 대체
 		for (let i = 0; i < list.length; i++) {
@@ -122,17 +129,20 @@ export class ToAnkiForPolishUp extends ToAnki {
 
 			// 각 요소의 앞뒤 공백은 없어야 하며(trim), 앞뒤가 일반문자(a-zA-z0-9_)가 아니고(\W), string 의 맨앞 또는 뒤(^ or $) 이어야 하며, 또한 string 일때는 escape 까지 해서 \\W 로 적어야 함
 			let regex_str1 = `(^${list_str})` // 시작일 때
-			str = str.replace(new RegExp(regex_str1, 'g'), `<font color=${color}>$1</font>`);
+			str = str.replace(new RegExp(regex_str1, 'g'), `<font color=${color}>${rep1}</font>`);
 			let regex_str2 = `(\`${list_str}(?!<\\/font>|\`<\\/font>)\`)` // 코드 중간이면서 한번도 font 가 바뀐 적이 없을 때 match, 즉 `문자열` 은 match 하고, `문자열`</font> 는 match 하지 않음
-			str = str.replace(new RegExp(regex_str2, 'g'), `<font color=${color}>$1</font>`); // 코드인 `` 은 <font></font> 안에 와야 함. 그 이유는 <code></code> 안에 있는 모든 <> 는 &lt;&gt; 로 바꾸기 때문
+			str = str.replace(new RegExp(regex_str2, 'g'), `<font color=${color}>${rep1}</font>`); // 코드인 `` 은 <font></font> 안에 와야 함. 그 이유는 <code></code> 안에 있는 모든 <> 는 &lt;&gt; 로 바꾸기 때문
 			let regex_str3 = `(?!\`)(\\W)(${list_str})(?!<\\/font>|\`|\`<\\/font>)(\\W)` // 코드가 아닌 중간이면서 한번도 font 가 바뀐 적이 없을 때
-			str = str.replace(new RegExp(regex_str3, 'g'), `$1<font color=${color}>$2</font>$3`); // \\W 를 <> 의 밖에 둔다는 게 포인트인데, 만약 안에 두면 \\W 가 < 또는 > 일 때, HTML 코드가 꼬이기 때문
+			str = str.replace(new RegExp(regex_str3, 'g'), `$1<font color=${color}>${rep2}</font>$3`); // \\W 를 <> 의 밖에 둔다는 게 포인트인데, 만약 안에 두면 \\W 가 < 또는 > 일 때, HTML 코드가 꼬이기 때문
 			let regex_str4 = `(${list_str}$)`// 끝일 때
-			str = str.replace(new RegExp(regex_str4, 'g'), `<font color=${color}>$1</font>`);
+			str = str.replace(new RegExp(regex_str4, 'g'), `<font color=${color}>${rep1}</font>`);
 			console.log(`after ${str}`)
 		}
 
 		return str;
+	}
+	html_TTS(str: string) {
+		return `<tts service="android" voice="en_US"> ${str} </tts>`
 	}
 
 	BuildAnkiFormat(question: string, answer: string) {
@@ -142,18 +152,26 @@ export class ToAnkiForPolishUp extends ToAnki {
 		answer = answer.replace(/(\(|\))/g, "")
 
 		let [added_array, removed_array] = this.getDiffRegex(question, answer)
-		question = this.replaceMatchedStringsToGetColor(question, removed_array, "#cc0000")
-		answer = this.replaceMatchedStringsToGetColor(answer, added_array, "#0096ff")
+		// 짧은 단어가 그 단어를 포함하는 긴 단어에 영향을 주지 않도록, list를 역순으로 정렬하여 가장 긴 부분부터 바꾸도록 하며, 문제에 사용될 단어 수를 3개로 제한함
+		added_array.sort((a, b) => b.length - a.length);
+		added_array = added_array.slice(0, 3)
+		question = this.replaceMatchedStringsToGetColor(question, removed_array, "#cc0000", "color")
+		let answer_space = this.replaceMatchedStringsToGetColor(answer, added_array, "#0096ff", "space")
+		answer = this.replaceMatchedStringsToGetColor(answer, added_array, "#0096ff", "color")
 
 		//let hint = added_array.replace("|", " / ").replace(new RegExp(added_array, "g"), "<font color=#0096ff>**$1**</font>")
 		let hint = this.shuffleArray(added_array).join(" / ")
-		hint = this.replaceMatchedStringsToGetColor(hint, added_array, "#0096ff")
+		hint = this.replaceMatchedStringsToGetColor(hint, added_array, "#0096ff", "color")
 		hint = `<br>(${hint})`
 
 		let anki_head = question
-		question += ` ${hint}`
-		question = `[Polish up this in English] ${question}`
+		question = `[Polish up this in English]<br>${question}`
 
-		return `- ${anki_head}%%<br>STARTI [Basic(MD)] ${question} Back: ${answer} %%` + `%% ENDI %%\n`
+		//TTS
+		hint = this.html_TTS(hint)
+		answer_space = this.html_TTS(answer_space)
+		answer = this.html_TTS(answer)
+
+		return `- ${anki_head}%%<br>STARTI [Basic(MD)] ${question}<br>${hint} (three hints are choosed) <br>${answer_space} Back: ${answer} %%` + `%% ENDI %%\n`
 	}
 }
