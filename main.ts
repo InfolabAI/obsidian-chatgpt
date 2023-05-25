@@ -637,7 +637,7 @@ export default class ChatGPT_MD extends Plugin {
 				selectedText = selectedText.replace(/\[\[(.*?)\]\]/g, "$1") // [[]]처리
 				selectedText = selectedText.replace(/\[([^\[\]]+?)\]\(([^()]+?)\)/g, "$1") // []() 처리. 한 줄에 [] 가 여러 개인 경우, 함께 match 되기 때문에 [] 내부에 []가 없는 조건만 match 함
 
-				let selectedText_parenthesis = `((("${selectedText}")))` // ((())) 안에 "" 을 붙였을 때 안정적인 대답이 나오는 예제가 있었음
+				let selectedText_parenthesis = `((("${selectedText}.")))` // ((())) 안에 "" 을 붙였을 때 안정적인 대답이 나오는 예제가 있었음
 
 				selectedText_parenthesis = this.removeCommentsFromMessages(selectedText_parenthesis);
 

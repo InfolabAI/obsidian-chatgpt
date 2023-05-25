@@ -141,9 +141,6 @@ export class ToAnkiForPolishUp extends ToAnki {
 
 		return str;
 	}
-	html_TTS(str: string) {
-		return `<tts service="android" voice="en_US"> ${str} </tts>`
-	}
 
 	BuildAnkiFormat(question: string, answer: string) {
 		// Anki 카드 format 을 만들어 return
@@ -154,14 +151,14 @@ export class ToAnkiForPolishUp extends ToAnki {
 		let [added_array, removed_array] = this.getDiffRegex(question, answer)
 		// 짧은 단어가 그 단어를 포함하는 긴 단어에 영향을 주지 않도록, list를 역순으로 정렬하여 가장 긴 부분부터 바꾸도록 하며, 문제에 사용될 단어 수를 3개로 제한함
 		added_array.sort((a, b) => b.length - a.length);
-		added_array = added_array.slice(0, 3)
+		let added_array_for_problem = added_array.slice(0, 3)
 		question = this.replaceMatchedStringsToGetColor(question, removed_array, "#cc0000", "color")
-		let answer_space = this.replaceMatchedStringsToGetColor(answer, added_array, "#0096ff", "space")
+		let answer_space = this.replaceMatchedStringsToGetColor(answer, added_array_for_problem, "#0096ff", "space")
 		answer = this.replaceMatchedStringsToGetColor(answer, added_array, "#0096ff", "color")
 
 		//let hint = added_array.replace("|", " / ").replace(new RegExp(added_array, "g"), "<font color=#0096ff>**$1**</font>")
-		let hint = this.shuffleArray(added_array).join(" / ")
-		hint = this.replaceMatchedStringsToGetColor(hint, added_array, "#0096ff", "color")
+		let hint = this.shuffleArray(added_array_for_problem).join(" / ")
+		hint = this.replaceMatchedStringsToGetColor(hint, added_array_for_problem, "#0096ff", "color")
 		hint = `<br>(${hint})`
 
 		let anki_head = question
@@ -172,6 +169,6 @@ export class ToAnkiForPolishUp extends ToAnki {
 		answer_space = this.html_TTS(answer_space)
 		answer = this.html_TTS(answer)
 
-		return `- ${anki_head}%%<br>STARTI [Basic(MD)] ${question}<br>${hint} (three hints are choosed) <br>${answer_space} Back: ${answer} %%` + `%% ENDI %%\n`
+		return `- ${anki_head}%%<br>STARTI [Basic(MD)] ${question}<br>${hint}<br>${answer_space} Back: ${answer} %%` + `%% ENDI %%\n`
 	}
 }
