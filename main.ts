@@ -519,7 +519,7 @@ export default class ChatGPT_MD extends Plugin {
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				let ankiForVocab = new ToAnkiForVocab(editor, editor.getSelection())
 				let [paragraph, definitions] = await ankiForVocab.buildQuestionToChatGPT()
-				let answer = ''
+				let answer_of_chatGPT = ''
 				let anki_question = ''
 				if (ankiForVocab.num_definitions !== 1) { // definition 이 여러 개면 chatGPT 가 하나를 선택하게 함
 					let message = this.removeCommentsFromMessages(definitions);
@@ -555,17 +555,29 @@ export default class ChatGPT_MD extends Plugin {
 						0, // frequency_penalty 
 					)
 						.then((response) => {
-							answer = response.fullstr
-							anki_question = `${paragraph}\n\n[Randomly selected options (including the correct option) from original ${ankiForVocab.num_definitions} options]\n${ankiForVocab.getMostSimilarDefinitions(answer)}`
+							answer_of_chatGPT = response.fullstr
+							// question TTS
+							paragraph = ankiForVocab.html_TTS(paragraph)
+							let top_answer_options = ankiForVocab.html_TTS(ankiForVocab.getMostSimilarDefinitions(answer_of_chatGPT))
+
+							anki_question = `${paragraph}\n\n[Randomly selected options (including the correct option) from original ${ankiForVocab.num_definitions} options]\n${top_answer_options}`
 						})
 				}
 				else {
-					answer = definitions
-					new Notice(answer, 15000)
-					anki_question = `${paragraph}\n\nOptions:\n${answer}`
+					answer_of_chatGPT = definitions
+					new Notice(answer_of_chatGPT, 15000)
+					// question TTS
+					paragraph = ankiForVocab.html_TTS(paragraph)
+					let top_answer_options = ankiForVocab.html_TTS(answer_of_chatGPT)
+
+					anki_question = `${paragraph}\n\nOptions:\n${top_answer_options}`
 				}
-				logWithLocation(answer)
-				await new SuggestToAnkiCardNote(app, ankiForVocab.BuildAnkiFormat(anki_question, answer), "3. Private/Anki Cards (Vocab).md").open()
+				logWithLocation(answer_of_chatGPT)
+
+				// answer TTS
+				answer_of_chatGPT = ankiForVocab.html_TTS(answer_of_chatGPT)
+
+				await new SuggestToAnkiCardNote(app, ankiForVocab.BuildAnkiFormat(anki_question, answer_of_chatGPT), "3. Private/Anki Cards (Vocab).md").open()
 				new Notice("All done!!")
 
 			}

@@ -179,8 +179,8 @@ export class ToAnkiForVocab extends ToAnki {
 		question = question.replace(/\(\(\((.*?)\)\)\)/g, `<font color=#0096ff>**$1**</font>${additional_term}`)
 
 		//TTS
-		question = question.replace(/^([\s\S]+)(\[Random.*?options\])([\s\S]+)$/g, (match, p1, ranop, p2) => this.html_TTS(p1) + ranop + this.html_TTS(p2))
-		answer = this.html_TTS(answer)
+		//question = question.replace(/^([\s\S]+)(\[Random.*?options\])([\s\S]+)$/g, (match, p1, ranop, p2) => this.html_TTS(p1) + ranop + this.html_TTS(p2))
+		//answer = this.html_TTS(answer)
 
 		question = `<font color="green">**[Predict the definition of highlighted text]**</font>\n${question}`
 
