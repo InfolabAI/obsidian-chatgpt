@@ -265,16 +265,36 @@ export class ToAnkiForVocab extends ToAnki {
 
 		// 해당 단어 정보를 찾는데 성공함
 
-		//get difinitions
+		//get cobuild difinitions
 		const definitions: string[] = [];
-		$('div[data-type-block="definition.title.type.cobuild"] div.hom').each((_: any, el: any) => { // hom 마다 돌면서 hom 내 첫 번째 div.def 의 text 만 가져옴(hom 내에 여러 개의 div.def 가 있을 수 있기 때문)
+		//$('div[data-type-block="definition.title.type.cobuild"] div.hom').each((_: any, el: any) => { // hom 마다 돌면서 hom 내 첫 번째 div.def 의 text 만 가져옴(hom 내에 여러 개의 div.def 가 있을 수 있기 때문)
+		$('div.Cob_Adv_Brit div.hom').each((_: any, el: any) => { // hom 마다 돌면서 hom 내 첫 번째 div.def 의 text 만 가져옴(hom 내에 여러 개의 div.def 가 있을 수 있기 때문)
 			const h2 = $(el).find('div.def').first();
 			const def = this.removeHtmlTags(h2.text().trim())
 			if (def !== "") {
 				definitions.push(def)
 			}
+			else {
+				definitions.push("")
+			}
 		});
-		logWithLocation(definitions)
+		//logWithLocation(definitions)
+
+		if (definitions.length === 0) {
+			//get british difinitions
+			$('div.Collins_Eng_Dict div.hom').each((_: any, el: any) => { // hom 마다 돌면서 hom 내 첫 번째 div.def 의 text 만 가져옴(hom 내에 여러 개의 div.def 가 있을 수 있기 때문)
+				const h2 = $(el).find('div.def').first();
+				const def = this.removeHtmlTags(h2.text().trim())
+				if (def !== "") {
+					definitions.push(def)
+				}
+				else {
+					definitions.push("")
+				}
+			});
+			//logWithLocation(definitions)
+		}
+
 
 		//get etc
 		const gramGrps: string[] = [];
@@ -288,9 +308,14 @@ export class ToAnkiForVocab extends ToAnki {
 		});
 
 		let ret = ''
-		for (let [i, [g, d]] of this.zip(gramGrps, definitions).entries()) {
+		let i = 0
+		for (let [g, d] of this.zip(gramGrps, definitions)) {
+			if (d === "") {
+				continue
+			}
+			i++
 			//ret += `<font color=#0096ff>[${g}]</font> ${d}<br>`
-			let def = `${i + 1}. [${g}] ${d.replace(/\n/g, "")}\n`
+			let def = `${i}. [${g}] ${d.replace(/\n/g, "")}\n`
 			ret += def
 			this.definition_array.push(def)
 			this.num_definitions++
@@ -298,7 +323,7 @@ export class ToAnkiForVocab extends ToAnki {
 		if (ret === '') {
 			throw Error(`ToAnkiforVocab > extractDefinitions() > no definition is gathered.`)
 		}
-		logWithLocation(ret);
+		//logWithLocation(ret);
 		return ret
 	}
 

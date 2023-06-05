@@ -519,6 +519,7 @@ export default class ChatGPT_MD extends Plugin {
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				let ankiForVocab = new ToAnkiForVocab(editor, editor.getSelection())
 				let [paragraph, definitions] = await ankiForVocab.buildQuestionToChatGPT()
+				console.log(`paragraph: ${paragraph}\ndefinitions: ${definitions}`)
 				let answer_of_chatGPT = ''
 				let anki_question = ''
 				if (ankiForVocab.num_definitions !== 1) { // definition 이 여러 개면 chatGPT 가 하나를 선택하게 함
@@ -548,7 +549,7 @@ export default class ChatGPT_MD extends Plugin {
 						true,
 						'GetDef',
 						"gpt-3.5-turbo",
-						100,
+						512,
 						1, // temperature: 0이면 input 이 동일하면, 동일한 output 만 나옴
 						0.1, // top_p: temperature 와 동일하지만, top_p 가 낮을수록 더욱 top 에 가까운 sample 만 선택하게 한다는 점에서 의미가 있으며, 이 값을 줄여서 output 의 variance 를 낮추어 postfixAfterOutput 을 수월하게 함
 						0, // presence_penalty 
@@ -679,7 +680,7 @@ export default class ChatGPT_MD extends Plugin {
 					true,
 					'Polish',
 					"gpt-3.5-turbo",
-					100,
+					512,
 					1, // temperature: 0이면 input 이 동일하면, 동일한 output 만 나옴
 					0.1, // top_p: temperature 와 동일하지만, top_p 가 낮을수록 더욱 top 에 가까운 sample 만 선택하게 한다는 점에서 의미가 있으며, 이 값을 줄여서 output 의 variance 를 낮추어 postfixAfterOutput 을 수월하게 함
 					0, // presence_penalty 
