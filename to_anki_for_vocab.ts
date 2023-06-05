@@ -278,7 +278,17 @@ export class ToAnkiForVocab extends ToAnki {
 				definitions.push("")
 			}
 		});
-		//logWithLocation(definitions)
+
+		//get etc
+		const gramGrps: string[] = [];
+		$('div.Cob_Adv_Brit div.hom').each((index, element) => {
+			const homHtml = $(element).html();
+			if (homHtml !== null) {
+				let gramGrp = this.extractGramPos(homHtml);
+				gramGrp = this.removeHtmlTags(gramGrp)
+				gramGrps.push(gramGrp);
+			}
+		});
 
 		if (definitions.length === 0) {
 			//get british difinitions
@@ -293,19 +303,16 @@ export class ToAnkiForVocab extends ToAnki {
 				}
 			});
 			//logWithLocation(definitions)
+			//get etc
+			$('div.Collins_Eng_Dict div.hom').each((index, element) => {
+				const homHtml = $(element).html();
+				if (homHtml !== null) {
+					let gramGrp = this.extractGramPos(homHtml);
+					gramGrp = this.removeHtmlTags(gramGrp)
+					gramGrps.push(gramGrp);
+				}
+			});
 		}
-
-
-		//get etc
-		const gramGrps: string[] = [];
-		$('div[data-type-block="definition.title.type.cobuild"] div.hom').each((index, element) => {
-			const homHtml = $(element).html();
-			if (homHtml !== null) {
-				let gramGrp = this.extractGramPos(homHtml);
-				gramGrp = this.removeHtmlTags(gramGrp)
-				gramGrps.push(gramGrp);
-			}
-		});
 
 		let ret = ''
 		let i = 0
