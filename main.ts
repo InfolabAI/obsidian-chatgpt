@@ -511,6 +511,64 @@ export default class ChatGPT_MD extends Plugin {
 		}
 		);
 
+		this.addCommand({
+			id: "ask-the-meaning",
+			name: "Ask the meaning of the phrase to ChatGPT",
+			icon: "message-circle",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				let ankiForVocab = new ToAnkiForVocab(editor, editor.getSelection())
+				let [paragraph] = await ankiForVocab.buildQuestionToChatGPT(0)
+				let paragraph_modified = paragraph.replace(`${ankiForVocab.selected_word}`, `[${ankiForVocab.selected_word}]`)
+				let answer_of_chatGPT = ''
+				let anki_question = ''
+				let message = this.removeCommentsFromMessages(paragraph_modified);
+
+				const messagesWithRoleAndMessage = [this.extractRoleAndMessage(message)]// role(e.g., user) 과 content (message) 를 지정함
+
+				// prepend system commands to messages
+				messagesWithRoleAndMessage.unshift({
+					role: "system",
+					//content: `I am a native English speaker and a professional. My task is to provide details for [ ] in user's paragraph. For example, I provide details like "some people use the expression [For God's sake]  in order to express annoyance or impatience or to add force to a question or request". The length of details is limited in 3 sentences. I am **not permitted** to deviate from my task.`
+					content: `My duty is to provide details for the given phrase in [ ]. For example, I provide details like "some people use the expression [For God's sake]  in order to express annoyance or impatience or to add force to a question or request". However, I am not authorized to provide a detailed explanation or exceed the limit of 3 sentences. My task is strictly defined and I cannot deviate from it.`
+				}
+				);
+				/* 아래 처럼 system 역할, user 역할을 설정
+				[ {
+						"role": "system",
+						"content": "I am a helpful assistant."
+					},
+					{
+						"role": "user",
+						"content": "\n\nsdfasdf\n"
+				} ]*/
+				await this.callOpenAIAPI(
+					streamManager,
+					editor,
+					messagesWithRoleAndMessage,
+					true,
+					'GetDef',
+					"gpt-3.5-turbo",
+					512,
+					1, // temperature: 0이면 input 이 동일하면, 동일한 output 만 나옴
+					0.1, // top_p: temperature 와 동일하지만, top_p 가 낮을수록 더욱 top 에 가까운 sample 만 선택하게 한다는 점에서 의미가 있으며, 이 값을 줄여서 output 의 variance 를 낮추어 postfixAfterOutput 을 수월하게 함
+					0, // presence_penalty 
+					0, // frequency_penalty 
+				)
+					.then((response) => {
+						answer_of_chatGPT = response.fullstr
+						// question TTS
+						anki_question = ankiForVocab.html_TTS(paragraph)
+					})
+				// answer TTS
+				answer_of_chatGPT = ankiForVocab.html_TTS(answer_of_chatGPT)
+
+				await new SuggestToAnkiCardNote(app, ankiForVocab.BuildAnkiFormat(anki_question, answer_of_chatGPT), "3. Private/Anki Cards (Vocab).md").open()
+				new Notice("All done!!")
+
+			}
+		}
+		);
+
 
 		this.addCommand({
 			id: "vocab-to-chatGPT",
@@ -561,7 +619,7 @@ export default class ChatGPT_MD extends Plugin {
 							paragraph = ankiForVocab.html_TTS(paragraph)
 							let top_answer_options = ankiForVocab.html_TTS(ankiForVocab.getMostSimilarDefinitions(answer_of_chatGPT))
 
-							anki_question = `${paragraph}\n\n[Randomly selected options (including the correct option) from original ${ankiForVocab.num_definitions} options]\n${top_answer_options}`
+							anki_question = `${paragraph}\n\n[Randomly selected options(including the correct option) from original ${ankiForVocab.num_definitions} options]\n${top_answer_options}`
 						})
 				}
 				else {
@@ -571,7 +629,7 @@ export default class ChatGPT_MD extends Plugin {
 					paragraph = ankiForVocab.html_TTS(paragraph)
 					let top_answer_options = ankiForVocab.html_TTS(answer_of_chatGPT)
 
-					anki_question = `${paragraph}\n\nOptions:\n${top_answer_options}`
+					anki_question = `${paragraph}\n\nOptions: \n${top_answer_options}`
 				}
 				logWithLocation(answer_of_chatGPT)
 
@@ -773,7 +831,7 @@ export default class ChatGPT_MD extends Plugin {
 						if (response.mode === "streaming") {
 							responseStr = response.fullstr;
 							// append \n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n
-							const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n`;
+							const newLine = `\n\n < hr class= "__chatgpt_plugin" >\n\n${this.getHeadingPrefix()}role:: user\n\n`;
 							editor.replaceRange(newLine, editor.getCursor());
 
 							// move cursor to end of completion

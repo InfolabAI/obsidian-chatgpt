@@ -129,10 +129,13 @@ export class ToAnkiForVocab extends ToAnki {
 
 	}
 
-	async buildQuestionToChatGPT(): Promise<string[]> {
+	async buildQuestionToChatGPT(option: Number = 1): Promise<string[]> {
 		// ChatGPT 에 넘길 내용들을 생성해서 return
 
 		let sentence = this.getSentencesAroundSelection()
+		if (option === 0) {
+			return [sentence]
+		}
 		let definitions = await this.getDefinitionsOfCollins()
 
 		return [sentence, definitions]
@@ -224,7 +227,8 @@ export class ToAnkiForVocab extends ToAnki {
 			.toArray()
 			.map((li: any) => {
 				logWithLocation($(li))
-				let suggested = $(li).find('a').text().trim()
+				//let suggested = $(li).find('a').text().trim()
+				let suggested = $(li).find('a').attr("href").split("/").pop()
 				if (suggested !== "View more related words") {
 					return suggested
 				}
@@ -328,6 +332,7 @@ export class ToAnkiForVocab extends ToAnki {
 			this.num_definitions++
 		}
 		if (ret === '') {
+			new Notice('There is no definition of given url');
 			throw Error(`ToAnkiforVocab > extractDefinitions() > no definition is gathered.`)
 		}
 		//logWithLocation(ret);
